@@ -124,7 +124,6 @@
         const uiActionText = document.getElementById('uiActionText');
 
         // משתני מערכת זיהוי
-        let trailPoints = []; 
         let handsModel = null;
         let resolveHands = null;
 
@@ -293,33 +292,8 @@
                 trackCtx.clearRect(0, 0, trackingCanvas.width, trackingCanvas.height);
 
                 // ==========================================
-                // 1. ציור מעקב פנים (ללא שינוי, על קנבס המעקב)
+                // 1. ציור מעקב פנים (מסגרת וטקסט בלבד)
                 // ==========================================
-                let currentPoints = [...trailPoints];
-                const primaryDetection = resizedDetections.length > 0 ? resizedDetections[0] : null;
-
-                if (primaryDetection) {
-                    const box = primaryDetection.detection.box;
-                    const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-                    currentPoints.unshift(center);
-                } else {
-                    currentPoints.unshift(null);
-                }
-
-                if (currentPoints.length > 40) currentPoints.pop();
-                trailPoints = currentPoints;
-
-                for (let i = 1; i < currentPoints.length; i++) {
-                    if (!currentPoints[i - 1] || !currentPoints[i]) continue;
-                    const thickness = Math.sqrt(40 / (i + 1)) * 2.5;
-                    trackCtx.beginPath();
-                    trackCtx.moveTo(currentPoints[i - 1].x, currentPoints[i - 1].y);
-                    trackCtx.lineTo(currentPoints[i].x, currentPoints[i].y);
-                    trackCtx.strokeStyle = `rgba(239, 68, 68, ${1 - (i / 40)})`; 
-                    trackCtx.lineWidth = thickness;
-                    trackCtx.stroke();
-                }
-
                 resizedDetections.forEach(result => {
                     const box = result.detection.box;
                     const gender = result.gender; 
