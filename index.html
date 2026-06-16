@@ -3,11 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מעקב פנים חכם</title>
+    <title>מעקב פנים וידיים חכם</title>
     <!-- טעינת Tailwind CSS לעיצוב -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- טעינת ספריית face-api.js -->
+    
+    <!-- טעינת ספריית face-api.js (לפנים) -->
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    
+    <!-- טעינת ספריות MediaPipe (לידיים) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
     <style>
         /* היפוך הוידאו והקנבס כדי ליצור אפקט מראה */
         #videoElement, #canvasElement {
@@ -17,30 +24,27 @@
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-6">
 
-    <div class="max-w-3xl w-full flex flex-col items-center">
+    <div class="max-w-4xl w-full flex flex-col items-center">
         
-        <div class="text-center mb-8">
+        <div class="text-center mb-6">
             <h1 class="text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                מעקב פנים חכם
+                מעקב פנים וידיים חכם
             </h1>
-            <p class="text-slate-400">זיהוי פנים מרובה וציור מסלול תנועה בזמן אמת</p>
+            <p class="text-slate-400">זיהוי פנים, מסלול תנועה, וספירת אצבעות בזמן אמת</p>
         </div>
 
-        <!-- הודעת שגיאה (מוסתרת כברירת מחדל) -->
         <div id="errorBox" class="hidden items-center gap-2 text-red-400 bg-red-400/10 p-4 rounded-lg mb-6 w-full justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
             <span id="errorMessage"></span>
         </div>
 
-        <!-- מיכל הוידאו והקנבס -->
         <div class="relative rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/10 bg-slate-800 border-2 border-slate-700 w-full aspect-video flex items-center justify-center">
             
-            <!-- שכבת טעינה וכפתור הפעלה -->
             <div id="overlay" class="absolute flex flex-col items-center gap-4 z-10">
                 <div id="loadingSpinner" class="animate-spin text-blue-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
                 </div>
-                <span id="statusText" class="text-slate-300">טוען ספריית זיהוי...</span>
+                <span id="statusText" class="text-slate-300">טוען ספריות (ייתכן שייקח כמה שניות)...</span>
                 
                 <button id="startBtn" class="hidden items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-full font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg text-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
@@ -48,24 +52,20 @@
                 </button>
             </div>
 
-            <!-- הוידאו מוסתר בהתחלה דרך opacity-0 -->
             <video id="videoElement" class="w-full h-full opacity-0 transition-opacity duration-500" muted playsinline></video>
-            
             <canvas id="canvasElement" class="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
         </div>
 
         <div class="mt-8 bg-slate-800/50 p-6 rounded-xl text-sm text-slate-400 w-full text-center border border-slate-700">
             <p>
-                האפליקציה משתמשת במודל AI ישירות בתוך הדפדפן (מותאם ל-GitHub Pages). 
-                <br/>
-                המידע והתמונות לא נשלחים לשום שרת, הכל מעובד מקומית על המכשיר שלך.
+                <strong>פיצ'ר חדש:</strong> הרם את היד למצלמה! המערכת תזהה את כף היד ותספור את כמות האצבעות המורמות בזמן אמת. <br>
+                המערכת מפעילה 2 מודלי בינה מלאכותית שונים לחלוטין (לפנים ולידיים) ישירות בדפדפן שלך.
             </p>
         </div>
 
     </div>
 
     <script>
-        // משתנים גלובליים
         const video = document.getElementById('videoElement');
         const canvas = document.getElementById('canvasElement');
         const overlay = document.getElementById('overlay');
@@ -75,7 +75,9 @@
         const errorBox = document.getElementById('errorBox');
         const errorMessage = document.getElementById('errorMessage');
         
-        let trailPoints = []; // שמירת היסטוריית מיקומים
+        let trailPoints = []; 
+        let handsModel = null;
+        let resolveHands = null;
 
         function showError(msg) {
             errorMessage.innerText = msg;
@@ -83,27 +85,42 @@
             errorBox.classList.add('flex');
         }
 
-        // פונקציה שנקראת ברגע שהדף וספריית face-api.js נטענו
         window.addEventListener('load', async () => {
-            if (typeof faceapi === 'undefined') {
-                showError("שגיאה בטעינת ספריית face-api. ודא שיש חיבור לאינטרנט.");
+            if (typeof faceapi === 'undefined' || typeof Hands === 'undefined') {
+                showError("שגיאה בטעינת הספריות. ודא שיש חיבור לאינטרנט.");
                 statusText.innerText = "שגיאה";
                 loadingSpinner.classList.add('hidden');
                 return;
             }
 
-            statusText.innerText = "טוען מודלים לזיהוי פנים...";
+            statusText.innerText = "מאתחל מודלי AI (פנים וידיים)...";
             
             try {
-                // נתיב המודלים (מה-CDN)
-                const modelUrl = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+                // 1. אתחול מודל הידיים (MediaPipe)
+                handsModel = new Hands({locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }});
+                handsModel.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.6,
+                    minTrackingConfidence: 0.6
+                });
                 
+                // הגדרת הפונקציה שתתפוס את התוצאות
+                handsModel.onResults((results) => {
+                    if (resolveHands) resolveHands(results);
+                });
+                
+                await handsModel.initialize(); // חימום המודל
+
+                // 2. אתחול מודל הפנים (Face-API)
+                const faceModelUrl = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
                 await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
-                    faceapi.nets.ageGenderNet.loadFromUri(modelUrl)
+                    faceapi.nets.tinyFaceDetector.loadFromUri(faceModelUrl),
+                    faceapi.nets.ageGenderNet.loadFromUri(faceModelUrl)
                 ]);
 
-                // המודלים נטענו בהצלחה - נציג את כפתור ההפעלה
                 statusText.classList.add('hidden');
                 loadingSpinner.classList.add('hidden');
                 startBtn.classList.remove('hidden');
@@ -111,11 +128,10 @@
 
             } catch (err) {
                 console.error(err);
-                showError("שגיאה בטעינת המודלים. ייתכן שיש חסימת רשת מול ה-CDN.");
+                showError("שגיאה בטעינת המודלים מהרשת.");
             }
         });
 
-        // הפעלת מצלמה בלחיצה על הכפתור
         startBtn.addEventListener('click', async () => {
             errorBox.classList.add('hidden');
             startBtn.classList.add('hidden');
@@ -132,17 +148,13 @@
                 
                 video.onloadedmetadata = async () => {
                     await video.play();
-                    // הסתרת שכבת הטעינה
                     overlay.classList.add('hidden');
-                    // הצגת הוידאו
                     video.classList.remove('opacity-0');
                     video.classList.add('opacity-100');
                     
-                    // התחלת תהליך הזיהוי
                     startDetection();
                 };
             } catch (err) {
-                console.error(err);
                 showError("שגיאה בגישה למצלמה. אנא ודא שאישרת גישה בדפדפן.");
                 startBtn.classList.remove('hidden');
                 statusText.classList.add('hidden');
@@ -150,9 +162,7 @@
             }
         });
 
-        // לולאת הזיהוי
         function startDetection() {
-            // התאמת גודל הקנבס לגודל המוצג בפועל
             const videoRect = video.getBoundingClientRect();
             const displaySize = { width: videoRect.width, height: videoRect.height };
             
@@ -165,14 +175,26 @@
             async function detectLoop() {
                 if (video.paused || video.ended) return;
 
-                const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
-                const detections = await faceapi.detectAllFaces(video, options).withAgeAndGender();
-                
-                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                // יצירת הבטחה (Promise) עבור מודל הידיים
+                const handPromise = new Promise((resolve) => {
+                    resolveHands = resolve;
+                    handsModel.send({image: video});
+                });
 
+                // הגדרות מודל הפנים
+                const faceOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+                const facePromise = faceapi.detectAllFaces(video, faceOptions).withAgeAndGender();
+
+                // הרצת שני המודלים במקביל לביצועים מקסימליים!
+                const [handResults, faceDetections] = await Promise.all([handPromise, facePromise]);
+                const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
+
+                // ניקוי הקנבס
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // --- שובל תנועה ---
+                // ==========================================
+                // 1. ציור מעקב פנים
+                // ==========================================
                 let currentPoints = [...trailPoints];
                 const primaryDetection = resizedDetections.length > 0 ? resizedDetections[0] : null;
 
@@ -184,63 +206,106 @@
                     currentPoints.unshift(null);
                 }
 
-                if (currentPoints.length > 40) {
-                    currentPoints.pop();
-                }
+                if (currentPoints.length > 40) currentPoints.pop();
                 trailPoints = currentPoints;
 
-                // ציור שובל
+                // שובל תנועה לפנים
                 for (let i = 1; i < currentPoints.length; i++) {
                     if (!currentPoints[i - 1] || !currentPoints[i]) continue;
                     const thickness = Math.sqrt(40 / (i + 1)) * 2.5;
                     ctx.beginPath();
                     ctx.moveTo(currentPoints[i - 1].x, currentPoints[i - 1].y);
                     ctx.lineTo(currentPoints[i].x, currentPoints[i].y);
-                    ctx.strokeStyle = `rgba(239, 68, 68, ${1 - (i / 40)})`;
+                    ctx.strokeStyle = `rgba(239, 68, 68, ${1 - (i / 40)})`; // אדום
                     ctx.lineWidth = thickness;
                     ctx.stroke();
                 }
 
-                // --- ציור תיבות וטקסט (גבר/אישה) ---
                 resizedDetections.forEach(result => {
                     const box = result.detection.box;
                     const gender = result.gender; 
                     
-                    // ציור מסגרת אדומה
                     ctx.strokeStyle = '#ff3b3b';
                     ctx.lineWidth = 4;
                     ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-                    let text = 'Face Tracked';
-                    if (gender === 'male') {
-                        text = 'זוהה גבר';
-                    } else if (gender === 'female') {
-                        text = 'זוהתה אישה';
-                    }
+                    let text = gender === 'male' ? 'זוהה גבר' : (gender === 'female' ? 'זוהתה אישה' : 'פנים');
 
-                    // ציור הטקסט (עם היפוך בגלל אפקט המראה ובגלל עברית)
                     ctx.save();
                     ctx.scale(-1, 1);
-                    
                     ctx.fillStyle = '#ff3b3b';
                     ctx.font = 'bold 20px sans-serif';
                     
                     const textWidth = ctx.measureText(text).width;
                     const textX = -(box.x + box.width);
 
-                    // רקע לטקסט
                     ctx.fillRect(textX - 10, box.y - 25, textWidth + 20, 25);
-                    
-                    // הטקסט עצמו בלבן
                     ctx.fillStyle = 'white';
                     ctx.fillText(text, textX, box.y - 7);
-
                     ctx.restore();
                 });
 
+                // ==========================================
+                // 2. ציור וספירת אצבעות הידיים
+                // ==========================================
+                if (handResults.multiHandLandmarks && handResults.multiHandLandmarks.length > 0) {
+                    handResults.multiHandLandmarks.forEach((landmarks, index) => {
+                        const handedness = handResults.multiHandedness[index].label; // ימין או שמאל
+
+                        // ציור השלד של היד
+                        window.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#10b981', lineWidth: 3}); // ירוק אמרלד
+                        window.drawLandmarks(ctx, landmarks, {color: '#34d399', lineWidth: 1, radius: 3});
+
+                        // אלגוריתם ספירת אצבעות
+                        let fingersCount = 0;
+                        
+                        // בדיקת 4 האצבעות (האם הקצה שלהן גבוה יותר מהמפרק התחתון)
+                        if (landmarks[8].y < landmarks[6].y) fingersCount++; // אצבע מורה
+                        if (landmarks[12].y < landmarks[10].y) fingersCount++; // אמה
+                        if (landmarks[16].y < landmarks[14].y) fingersCount++; // קמיצה
+                        if (landmarks[20].y < landmarks[18].y) fingersCount++; // זרת
+
+                        // אגודל - נבדק אופקית (X) ומושפע מהאם זו יד ימין או שמאל
+                        if (handedness === 'Right') {
+                            if (landmarks[4].x < landmarks[3].x) fingersCount++;
+                        } else {
+                            if (landmarks[4].x > landmarks[3].x) fingersCount++;
+                        }
+
+                        // בחירת הניסוח התקני בעברית
+                        let fingerText = '';
+                        if (fingersCount === 1) {
+                            fingerText = 'זוהתה אצבע אחת';
+                        } else {
+                            fingerText = `זוהו ${fingersCount} אצבעות`;
+                        }
+
+                        // ציור הטקסט מעל שורש כף היד
+                        const wristX = landmarks[0].x * canvas.width;
+                        const wristY = landmarks[0].y * canvas.height;
+
+                        ctx.save();
+                        ctx.scale(-1, 1); // היפוך כדי שהעברית לא תהיה הפוכה
+                        ctx.fillStyle = '#10b981';
+                        ctx.font = 'bold 22px sans-serif';
+
+                        const tWidth = ctx.measureText(fingerText).width;
+                        const drawX = -wristX; // התאמה להיפוך
+
+                        // רקע לטקסט
+                        ctx.fillRect(drawX - tWidth/2 - 10, wristY - 50, tWidth + 20, 32);
+                        // הטקסט עצמו בלבן
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(fingerText, drawX - tWidth/2, wristY - 27);
+                        ctx.restore();
+                    });
+                }
+
+                // קריאה לפריים הבא
                 requestAnimationFrame(detectLoop);
             }
 
+            // התחלת הלולאה האינסופית
             detectLoop();
         }
     </script>
