@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<!-- הוגדר פונט Arial לכל העמוד כבקשתך -->
+<html lang="he" dir="rtl" style="font-family: Arial, sans-serif;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מעקב פנים וידיים חכם</title>
+    <title>מעקב פנים וידיים חכם - ציור באוויר</title>
     <!-- טעינת Tailwind CSS לעיצוב -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -16,21 +17,32 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
-        /* היפוך הוידאו והקנבס כדי ליצור אפקט מראה */
-        #videoElement, #canvasElement {
+        /* היפוך הוידאו והקנבסים כדי ליצור אפקט מראה */
+        #videoElement, #canvasElement, #drawingCanvas {
             transform: scaleX(-1);
+        }
+        /* סגנון לנקודת הצבע בסרגל הכלים */
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: inline-block;
+            vertical-align: middle;
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-6">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-center p-6">
 
-    <div class="max-w-4xl w-full flex flex-col items-center">
+    <!-- הגדלנו את המיכל המרכזי מ-4xl ל-6xl -->
+    <div class="max-w-6xl w-full flex flex-col items-center">
         
         <div class="text-center mb-6">
-            <h1 class="text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                מעקב פנים וידיים חכם
+            <!-- הגדלנו את הכותרת ל-5xl/6xl -->
+            <h1 class="text-5xl md:text-6xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 drop-shadow-lg">
+                מעקב חכם וציור באוויר
             </h1>
-            <p class="text-slate-400">זיהוי פנים, מסלול תנועה, וספירת אצבעות בזמן אמת</p>
+            <p class="text-slate-300 text-lg">שלוט במערכת וצייר בעזרת מחוות ידיים מול המצלמה</p>
         </div>
 
         <div id="errorBox" class="hidden items-center gap-2 text-red-400 bg-red-400/10 p-4 rounded-lg mb-6 w-full justify-center">
@@ -38,36 +50,67 @@
             <span id="errorMessage"></span>
         </div>
 
-        <div class="relative rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/10 bg-slate-800 border-2 border-slate-700 w-full aspect-video flex items-center justify-center">
+        <!-- חלון המצלמה - מוגדל ורחב יותר -->
+        <div class="relative rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/20 bg-slate-800 border-4 border-slate-700 w-full aspect-video flex items-center justify-center">
             
-            <div id="overlay" class="absolute flex flex-col items-center gap-4 z-10">
+            <div id="overlay" class="absolute flex flex-col items-center gap-4 z-20 bg-slate-900/80 p-8 rounded-2xl backdrop-blur-sm">
                 <div id="loadingSpinner" class="animate-spin text-blue-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
                 </div>
-                <span id="statusText" class="text-slate-300">טוען ספריות (ייתכן שייקח כמה שניות)...</span>
+                <span id="statusText" class="text-slate-200 text-xl font-bold">טוען ספריות AI (ייתכן שייקח כמה שניות)...</span>
                 
-                <button id="startBtn" class="hidden items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-full font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg text-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
-                    הפעל מצלמה
+                <button id="startBtn" class="hidden items-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white px-10 py-5 rounded-full font-bold transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.4)] text-2xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
+                    הפעל מצלמה ואינטראקציה
                 </button>
             </div>
 
-            <video id="videoElement" class="w-full h-full opacity-0 transition-opacity duration-500" muted playsinline></video>
-            <canvas id="canvasElement" class="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
+            <!-- הוידאו -->
+            <video id="videoElement" class="absolute top-0 left-0 w-full h-full object-cover opacity-0 transition-opacity duration-500" muted playsinline></video>
+            
+            <!-- שכבת הציור (מצטברת, לא מתנקה) -->
+            <canvas id="drawingCanvas" class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"></canvas>
+            
+            <!-- שכבת המעקב והממשק (מתנקה כל פריים) -->
+            <canvas id="canvasElement" class="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></canvas>
         </div>
 
-        <div class="mt-8 bg-slate-800/50 p-6 rounded-xl text-sm text-slate-400 w-full text-center border border-slate-700">
-            <p>
-                <strong>פיצ'ר חדש:</strong> הרם את היד למצלמה! המערכת תזהה את כף היד ותספור את כמות האצבעות המורמות בזמן אמת. <br>
-                המערכת מפעילה 2 מודלי בינה מלאכותית שונים לחלוטין (לפנים ולידיים) ישירות בדפדפן שלך.
-            </p>
+        <!-- סרגל סטטוס בזמן אמת -->
+        <div class="mt-4 w-full bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex flex-wrap justify-between items-center gap-4 shadow-lg">
+            <div class="flex items-center gap-3">
+                <span class="text-slate-400 font-bold">צבע נוכחי:</span>
+                <div id="uiColorDot" class="color-dot bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]"></div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-slate-400 font-bold">עובי קו:</span>
+                <span id="uiBrushSize" class="text-white bg-slate-700 px-3 py-1 rounded-lg font-mono">8px</span>
+            </div>
+            <div class="flex items-center gap-3 flex-grow justify-end">
+                <span class="text-slate-400 font-bold">מצב:</span>
+                <span id="uiActionText" class="text-emerald-400 font-bold bg-emerald-400/10 px-4 py-2 rounded-lg border border-emerald-400/20">ממתין ליד...</span>
+            </div>
+        </div>
+
+        <!-- מדריך מחוות -->
+        <div class="mt-6 bg-slate-800/50 p-6 rounded-xl text-slate-300 w-full border border-slate-700 shadow-inner">
+            <h3 class="text-xl font-bold text-white mb-4 border-b border-slate-600 pb-2">איך מציירים באוויר? (מחוות יד)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center gap-3"><span class="text-2xl">☝️</span> <span><strong>אצבע אחת:</strong> מצייר קו</span></div>
+                <div class="flex items-center gap-3"><span class="text-2xl">✌️</span> <span><strong>2 אצבעות:</strong> מחליף צבע ציור</span></div>
+                <div class="flex items-center gap-3"><span class="text-2xl">🤟</span> <span><strong>3 אצבעות:</strong> משנה עובי מכחול</span></div>
+                <div class="flex items-center gap-3"><span class="text-2xl">🖐️</span> <span><strong>4 אצבעות:</strong> שומר תמונה למחשב</span></div>
+                <div class="flex items-center gap-3"><span class="text-2xl">✋</span> <span><strong>5 אצבעות:</strong> משהה ציור (ריחוף)</span></div>
+                <div class="flex items-center gap-3"><span class="text-2xl">✊</span> <span><strong>אגרוף סגור:</strong> מוחק את כל הציור</span></div>
+            </div>
         </div>
 
     </div>
 
     <script>
         const video = document.getElementById('videoElement');
-        const canvas = document.getElementById('canvasElement');
+        const trackingCanvas = document.getElementById('canvasElement');
+        const drawingCanvas = document.getElementById('drawingCanvas');
+        
         const overlay = document.getElementById('overlay');
         const startBtn = document.getElementById('startBtn');
         const statusText = document.getElementById('statusText');
@@ -75,9 +118,30 @@
         const errorBox = document.getElementById('errorBox');
         const errorMessage = document.getElementById('errorMessage');
         
+        // אלמנטים של ה-UI
+        const uiColorDot = document.getElementById('uiColorDot');
+        const uiBrushSize = document.getElementById('uiBrushSize');
+        const uiActionText = document.getElementById('uiActionText');
+
+        // משתני מערכת זיהוי
         let trailPoints = []; 
         let handsModel = null;
         let resolveHands = null;
+
+        // משתני ציור באוויר
+        let isDrawing = false;
+        let lastPoint = null;
+        let smoothedPoint = null; // להחלקת התנועה
+        
+        const brushColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#ffffff']; // אדום, כחול, ירוק, כתום, סגול, ורוד, לבן
+        let colorIndex = 0;
+        
+        const brushSizes = [3, 8, 15, 25];
+        let sizeIndex = 1;
+
+        // מנגנון Debounce / Cooldown למניעת ריבוי פעולות מהיר
+        let lastActionTime = 0;
+        const COOLDOWN_MS = 800; // חצי שניה+ השהיה בין פעולות מערכת
 
         function showError(msg) {
             errorMessage.innerText = msg;
@@ -85,36 +149,65 @@
             errorBox.classList.add('flex');
         }
 
+        function updateUI(actionText, actionColorClass = 'text-emerald-400', actionBgClass = 'bg-emerald-400/10', actionBorderClass = 'border-emerald-400/20') {
+            uiColorDot.style.backgroundColor = brushColors[colorIndex];
+            uiColorDot.style.boxShadow = `0 0 10px ${brushColors[colorIndex]}80`;
+            uiBrushSize.innerText = `${brushSizes[sizeIndex]}px`;
+            
+            uiActionText.innerText = actionText;
+            uiActionText.className = `font-bold px-4 py-2 rounded-lg border transition-colors duration-300 ${actionColorClass} ${actionBgClass} ${actionBorderClass}`;
+        }
+
+        // פונקציה לשמירת הקנבס
+        function saveCanvasImage() {
+            // יוצרים קנבס זמני עם רקע שחור כדי שהציור יבלוט (כי ה-drawingCanvas עצמו שקוף)
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = drawingCanvas.width;
+            tempCanvas.height = drawingCanvas.height;
+            const tCtx = tempCanvas.getContext('2d');
+            
+            // היפוך מראה גם לשמירה, כדי שיישמר כמו שציירנו
+            tCtx.translate(tempCanvas.width, 0);
+            tCtx.scale(-1, 1);
+            
+            tCtx.fillStyle = '#1e293b'; // צבע רקע שחור-כחלחל
+            tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tCtx.drawImage(drawingCanvas, 0, 0);
+            
+            const dataURL = tempCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `AirDrawing_${new Date().getTime()}.png`;
+            link.href = dataURL;
+            link.click();
+        }
+
         window.addEventListener('load', async () => {
             if (typeof faceapi === 'undefined' || typeof Hands === 'undefined') {
-                showError("שגיאה בטעינת הספריות. ודא שיש חיבור לאינטרנט.");
-                statusText.innerText = "שגיאה";
+                showError("שגיאה בטעינת הספריות. ודא שיש חיבור לאינטרנט ותוספי חסימת פרסומות כבויים.");
+                statusText.innerText = "שגיאה בטעינה";
                 loadingSpinner.classList.add('hidden');
                 return;
             }
 
-            statusText.innerText = "מאתחל מודלי AI (פנים וידיים)...";
+            statusText.innerText = "מאתחל מודלי AI מתקדמים (פנים וידיים)...";
             
             try {
-                // 1. אתחול מודל הידיים (MediaPipe)
                 handsModel = new Hands({locateFile: (file) => {
                     return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
                 }});
                 handsModel.setOptions({
                     maxNumHands: 2,
                     modelComplexity: 1,
-                    minDetectionConfidence: 0.6,
-                    minTrackingConfidence: 0.6
+                    minDetectionConfidence: 0.7,
+                    minTrackingConfidence: 0.7
                 });
                 
-                // הגדרת הפונקציה שתתפוס את התוצאות
                 handsModel.onResults((results) => {
                     if (resolveHands) resolveHands(results);
                 });
                 
-                await handsModel.initialize(); // חימום המודל
+                await handsModel.initialize();
 
-                // 2. אתחול מודל הפנים (Face-API)
                 const faceModelUrl = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(faceModelUrl),
@@ -140,8 +233,9 @@
             statusText.innerText = "מבקש גישה למצלמה...";
 
             try {
+                // דורש רזולוציה גבוהה לציור מדויק
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } 
+                    video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: "user" } 
                 });
                 
                 video.srcObject = stream;
@@ -166,34 +260,40 @@
             const videoRect = video.getBoundingClientRect();
             const displaySize = { width: videoRect.width, height: videoRect.height };
             
-            canvas.width = displaySize.width;
-            canvas.height = displaySize.height;
-            faceapi.matchDimensions(canvas, displaySize);
+            // התאמת שני הקנבסים לגודל הוידאו הפיזי המוצג
+            trackingCanvas.width = displaySize.width;
+            trackingCanvas.height = displaySize.height;
+            faceapi.matchDimensions(trackingCanvas, displaySize);
             
-            const ctx = canvas.getContext('2d');
+            drawingCanvas.width = displaySize.width;
+            drawingCanvas.height = displaySize.height;
+            
+            const trackCtx = trackingCanvas.getContext('2d');
+            const drawCtx = drawingCanvas.getContext('2d');
+            
+            // הגדרות מכחול לקנבס הציור
+            drawCtx.lineCap = 'round';
+            drawCtx.lineJoin = 'round';
 
             async function detectLoop() {
                 if (video.paused || video.ended) return;
 
-                // יצירת הבטחה (Promise) עבור מודל הידיים
                 const handPromise = new Promise((resolve) => {
                     resolveHands = resolve;
                     handsModel.send({image: video});
                 });
 
-                // הגדרות מודל הפנים
                 const faceOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
                 const facePromise = faceapi.detectAllFaces(video, faceOptions).withAgeAndGender();
 
-                // הרצת שני המודלים במקביל לביצועים מקסימליים!
                 const [handResults, faceDetections] = await Promise.all([handPromise, facePromise]);
                 const resizedDetections = faceapi.resizeResults(faceDetections, displaySize);
 
-                // ניקוי הקנבס
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // מנקים רק את קנבס המעקב! קנבס הציור נשאר כמו שהוא.
+                trackCtx.clearRect(0, 0, trackingCanvas.width, trackingCanvas.height);
 
                 // ==========================================
-                // 1. ציור מעקב פנים
+                // 1. ציור מעקב פנים (ללא שינוי, על קנבס המעקב)
                 // ==========================================
                 let currentPoints = [...trailPoints];
                 const primaryDetection = resizedDetections.length > 0 ? resizedDetections[0] : null;
@@ -209,100 +309,239 @@
                 if (currentPoints.length > 40) currentPoints.pop();
                 trailPoints = currentPoints;
 
-                // שובל תנועה לפנים
                 for (let i = 1; i < currentPoints.length; i++) {
                     if (!currentPoints[i - 1] || !currentPoints[i]) continue;
                     const thickness = Math.sqrt(40 / (i + 1)) * 2.5;
-                    ctx.beginPath();
-                    ctx.moveTo(currentPoints[i - 1].x, currentPoints[i - 1].y);
-                    ctx.lineTo(currentPoints[i].x, currentPoints[i].y);
-                    ctx.strokeStyle = `rgba(239, 68, 68, ${1 - (i / 40)})`; // אדום
-                    ctx.lineWidth = thickness;
-                    ctx.stroke();
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(currentPoints[i - 1].x, currentPoints[i - 1].y);
+                    trackCtx.lineTo(currentPoints[i].x, currentPoints[i].y);
+                    trackCtx.strokeStyle = `rgba(239, 68, 68, ${1 - (i / 40)})`; 
+                    trackCtx.lineWidth = thickness;
+                    trackCtx.stroke();
                 }
 
                 resizedDetections.forEach(result => {
                     const box = result.detection.box;
                     const gender = result.gender; 
                     
-                    ctx.strokeStyle = '#ff3b3b';
-                    ctx.lineWidth = 4;
-                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+                    trackCtx.strokeStyle = '#ff3b3b';
+                    trackCtx.lineWidth = 4;
+                    trackCtx.strokeRect(box.x, box.y, box.width, box.height);
 
                     let text = gender === 'male' ? 'זוהה גבר' : (gender === 'female' ? 'זוהתה אישה' : 'פנים');
 
-                    ctx.save();
-                    ctx.scale(-1, 1);
-                    ctx.fillStyle = '#ff3b3b';
-                    ctx.font = 'bold 20px sans-serif';
+                    trackCtx.save();
+                    trackCtx.scale(-1, 1);
+                    trackCtx.fillStyle = '#ff3b3b';
+                    trackCtx.font = 'bold 20px Arial, sans-serif';
                     
-                    const textWidth = ctx.measureText(text).width;
+                    const textWidth = trackCtx.measureText(text).width;
                     const textX = -(box.x + box.width);
 
-                    ctx.fillRect(textX - 10, box.y - 25, textWidth + 20, 25);
-                    ctx.fillStyle = 'white';
-                    ctx.fillText(text, textX, box.y - 7);
-                    ctx.restore();
+                    trackCtx.fillRect(textX - 10, box.y - 25, textWidth + 20, 25);
+                    trackCtx.fillStyle = 'white';
+                    trackCtx.fillText(text, textX, box.y - 7);
+                    trackCtx.restore();
                 });
 
                 // ==========================================
-                // 2. ציור וספירת אצבעות הידיים
+                // 2. ציור כפות ידיים וספירת אצבעות
                 // ==========================================
+                let isHandDetected = false;
+
                 if (handResults.multiHandLandmarks && handResults.multiHandLandmarks.length > 0) {
+                    isHandDetected = true;
+                    
+                    // עוברים על כל הידיים שזוהו בשביל השלד, אבל נצייר בפועל רק עם היד הראשונה שזוהתה
                     handResults.multiHandLandmarks.forEach((landmarks, index) => {
-                        const handedness = handResults.multiHandedness[index].label; // ימין או שמאל
+                        const handedness = handResults.multiHandedness[index].label; 
 
-                        // ציור השלד של היד
-                        window.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {color: '#10b981', lineWidth: 3}); // ירוק אמרלד
-                        window.drawLandmarks(ctx, landmarks, {color: '#34d399', lineWidth: 1, radius: 3});
+                        // ציור השלד
+                        window.drawConnectors(trackCtx, landmarks, HAND_CONNECTIONS, {color: '#10b981', lineWidth: 3});
+                        window.drawLandmarks(trackCtx, landmarks, {color: '#34d399', lineWidth: 1, radius: 3});
 
-                        // אלגוריתם ספירת אצבעות
                         let fingersCount = 0;
                         
-                        // בדיקת 4 האצבעות (האם הקצה שלהן גבוה יותר מהמפרק התחתון)
-                        if (landmarks[8].y < landmarks[6].y) fingersCount++; // אצבע מורה
+                        if (landmarks[8].y < landmarks[6].y) fingersCount++; // מורה
                         if (landmarks[12].y < landmarks[10].y) fingersCount++; // אמה
                         if (landmarks[16].y < landmarks[14].y) fingersCount++; // קמיצה
                         if (landmarks[20].y < landmarks[18].y) fingersCount++; // זרת
 
-                        // אגודל - נבדק אופקית (X) ומושפע מהאם זו יד ימין או שמאל
                         if (handedness === 'Right') {
                             if (landmarks[4].x < landmarks[3].x) fingersCount++;
                         } else {
                             if (landmarks[4].x > landmarks[3].x) fingersCount++;
                         }
 
-                        // בחירת הניסוח התקני בעברית
-                        let fingerText = '';
-                        if (fingersCount === 1) {
-                            fingerText = 'זוהתה אצבע אחת';
-                        } else {
-                            fingerText = `זוהו ${fingersCount} אצבעות`;
+                        // ציור טקסט אצבעות
+                        let fingerText = fingersCount === 1 ? 'אצבע אחת' : `${fingersCount} אצבעות`;
+                        const wristX = landmarks[0].x * trackingCanvas.width;
+                        const wristY = landmarks[0].y * trackingCanvas.height;
+
+                        trackCtx.save();
+                        trackCtx.scale(-1, 1); 
+                        trackCtx.fillStyle = '#10b981';
+                        trackCtx.font = 'bold 22px Arial, sans-serif';
+
+                        const tWidth = trackCtx.measureText(fingerText).width;
+                        const drawX = -wristX; 
+
+                        trackCtx.fillRect(drawX - tWidth/2 - 10, wristY - 50, tWidth + 20, 32);
+                        trackCtx.fillStyle = 'white';
+                        trackCtx.fillText(fingerText, drawX - tWidth/2, wristY - 27);
+                        trackCtx.restore();
+
+                        // ==========================================
+                        // 3. לוגיקת הציור באוויר (רק עבור היד הראשית index === 0)
+                        // ==========================================
+                        if (index === 0) {
+                            // המרה לקואורדינטות קנבס. בגלל שהקנבס הפוך ב-CSS (scaleX(-1)), 
+                            // אנחנו משתמשים במיקום ה-X הרגיל וזה ייראה נכון פיזית על המסך.
+                            const targetX = landmarks[8].x * trackingCanvas.width;
+                            const targetY = landmarks[8].y * trackingCanvas.height;
+
+                            // אלגוריתם החלקת תנועה (Smoothing)
+                            if (!smoothedPoint) {
+                                smoothedPoint = { x: targetX, y: targetY };
+                            } else {
+                                smoothedPoint.x = smoothedPoint.x * 0.7 + targetX * 0.3;
+                                smoothedPoint.y = smoothedPoint.y * 0.7 + targetY * 0.3;
+                            }
+
+                            const now = Date.now();
+                            let currentActionStr = "ממתין ליד...";
+                            let uiColor = 'text-emerald-400';
+                            let uiBg = 'bg-emerald-400/10';
+                            let uiBorder = 'border-emerald-400/20';
+
+                            // מכונת מצבים לפי מספר האצבעות
+                            switch (fingersCount) {
+                                case 1: // מצייר
+                                    currentActionStr = "מצייר באוויר...";
+                                    uiColor = 'text-blue-400'; uiBg = 'bg-blue-400/10'; uiBorder = 'border-blue-400/20';
+                                    
+                                    drawCtx.strokeStyle = brushColors[colorIndex];
+                                    drawCtx.lineWidth = brushSizes[sizeIndex];
+                                    
+                                    drawCtx.beginPath();
+                                    if (lastPoint) {
+                                        drawCtx.moveTo(lastPoint.x, lastPoint.y);
+                                    } else {
+                                        drawCtx.moveTo(smoothedPoint.x, smoothedPoint.y);
+                                    }
+                                    drawCtx.lineTo(smoothedPoint.x, smoothedPoint.y);
+                                    drawCtx.stroke();
+                                    
+                                    lastPoint = { x: smoothedPoint.x, y: smoothedPoint.y };
+
+                                    // חיווי ציור מלא על קנבס המעקב
+                                    trackCtx.beginPath();
+                                    trackCtx.arc(smoothedPoint.x, smoothedPoint.y, brushSizes[sizeIndex]/2 + 4, 0, 2 * Math.PI);
+                                    trackCtx.fillStyle = brushColors[colorIndex];
+                                    trackCtx.fill();
+                                    trackCtx.strokeStyle = 'white';
+                                    trackCtx.lineWidth = 2;
+                                    trackCtx.stroke();
+                                    break;
+
+                                case 2: // החלפת צבע
+                                    lastPoint = null;
+                                    if (now - lastActionTime > COOLDOWN_MS) {
+                                        colorIndex = (colorIndex + 1) % brushColors.length;
+                                        lastActionTime = now;
+                                        currentActionStr = "🎨 צבע הוחלף!";
+                                        uiColor = 'text-purple-400'; uiBg = 'bg-purple-400/10'; uiBorder = 'border-purple-400/20';
+                                    } else if (now - lastActionTime > 300) {
+                                        currentActionStr = "מוכן להחלפת צבע";
+                                    } else {
+                                        currentActionStr = "🎨 צבע הוחלף!";
+                                        uiColor = 'text-purple-400'; uiBg = 'bg-purple-400/10'; uiBorder = 'border-purple-400/20';
+                                    }
+                                    drawHoverIndicator(trackCtx, smoothedPoint);
+                                    break;
+
+                                case 3: // שינוי עובי
+                                    lastPoint = null;
+                                    if (now - lastActionTime > COOLDOWN_MS) {
+                                        sizeIndex = (sizeIndex + 1) % brushSizes.length;
+                                        lastActionTime = now;
+                                        currentActionStr = "📏 עובי השתנה!";
+                                        uiColor = 'text-orange-400'; uiBg = 'bg-orange-400/10'; uiBorder = 'border-orange-400/20';
+                                    } else if (now - lastActionTime > 300) {
+                                        currentActionStr = "מוכן לשינוי עובי";
+                                    } else {
+                                        currentActionStr = "📏 עובי השתנה!";
+                                        uiColor = 'text-orange-400'; uiBg = 'bg-orange-400/10'; uiBorder = 'border-orange-400/20';
+                                    }
+                                    drawHoverIndicator(trackCtx, smoothedPoint);
+                                    break;
+
+                                case 4: // שמירת תמונה
+                                    lastPoint = null;
+                                    if (now - lastActionTime > COOLDOWN_MS * 2) {
+                                        saveCanvasImage();
+                                        lastActionTime = now;
+                                        currentActionStr = "💾 הציור נשמר!";
+                                        uiColor = 'text-pink-400'; uiBg = 'bg-pink-400/10'; uiBorder = 'border-pink-400/20';
+                                    } else if (now - lastActionTime > 300) {
+                                        currentActionStr = "מוכן לשמירה";
+                                    } else {
+                                        currentActionStr = "💾 הציור נשמר!";
+                                        uiColor = 'text-pink-400'; uiBg = 'bg-pink-400/10'; uiBorder = 'border-pink-400/20';
+                                    }
+                                    drawHoverIndicator(trackCtx, smoothedPoint);
+                                    break;
+
+                                case 5: // המתנה / ריחוף
+                                    lastPoint = null;
+                                    currentActionStr = "מצב ריחוף (המתנה)";
+                                    drawHoverIndicator(trackCtx, smoothedPoint);
+                                    break;
+
+                                case 0: // מחיקת מסך
+                                    lastPoint = null;
+                                    if (now - lastActionTime > COOLDOWN_MS) {
+                                        drawCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                                        lastActionTime = now;
+                                        currentActionStr = "🧹 הלוח נמחק!";
+                                        uiColor = 'text-red-400'; uiBg = 'bg-red-400/10'; uiBorder = 'border-red-400/20';
+                                    } else if (now - lastActionTime > 300) {
+                                        currentActionStr = "אגרוף מזוהה...";
+                                    } else {
+                                        currentActionStr = "🧹 הלוח נמחק!";
+                                        uiColor = 'text-red-400'; uiBg = 'bg-red-400/10'; uiBorder = 'border-red-400/20';
+                                    }
+                                    break;
+                            }
+
+                            // עדכון הסטטוס בר ב-UI
+                            updateUI(currentActionStr, uiColor, uiBg, uiBorder);
                         }
-
-                        // ציור הטקסט מעל שורש כף היד
-                        const wristX = landmarks[0].x * canvas.width;
-                        const wristY = landmarks[0].y * canvas.height;
-
-                        ctx.save();
-                        ctx.scale(-1, 1); // היפוך כדי שהעברית לא תהיה הפוכה
-                        ctx.fillStyle = '#10b981';
-                        ctx.font = 'bold 22px sans-serif';
-
-                        const tWidth = ctx.measureText(fingerText).width;
-                        const drawX = -wristX; // התאמה להיפוך
-
-                        // רקע לטקסט
-                        ctx.fillRect(drawX - tWidth/2 - 10, wristY - 50, tWidth + 20, 32);
-                        // הטקסט עצמו בלבן
-                        ctx.fillStyle = 'white';
-                        ctx.fillText(fingerText, drawX - tWidth/2, wristY - 27);
-                        ctx.restore();
                     });
+                } else {
+                    // אם אין ידיים בפריים
+                    lastPoint = null;
+                    smoothedPoint = null;
+                    updateUI("מחפש כף יד...", 'text-slate-400', 'bg-slate-800', 'border-slate-700');
                 }
 
                 // קריאה לפריים הבא
                 requestAnimationFrame(detectLoop);
+            }
+
+            // פונקציית עזר לציור חיווי ריחוף (מעגל חלול)
+            function drawHoverIndicator(ctx, point) {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, brushSizes[sizeIndex]/2 + 6, 0, 2 * Math.PI);
+                ctx.strokeStyle = brushColors[colorIndex];
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // נקודה קטנה פנימית להצבעה מדויקת
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+                ctx.fillStyle = brushColors[colorIndex];
+                ctx.fill();
             }
 
             // התחלת הלולאה האינסופית
